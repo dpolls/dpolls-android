@@ -121,6 +121,7 @@ dependencies {
     implementation "org.web3j:utils:$web3j_version"
     implementation "org.web3j:abi:$web3j_version"
     implementation "org.web3j:contracts:$web3j_version"
+    implementation 'org.slf4j:slf4j-android:1.7.36'
 
     // Web3Auth SDK
     implementation 'com.github.web3auth:web3auth-android-sdk:9.0.0'
