@@ -5,8 +5,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.blurtopian.dpolls.data.model.Poll
 import com.blurtopian.dpolls.databinding.ItemPollBinding
+import com.blurtopian.dpolls.domain.model.Poll
 
 class PollsAdapter(
     private val onPollClick: (Poll) -> Unit
@@ -31,7 +31,7 @@ class PollsAdapter(
 
         init {
             binding.root.setOnClickListener {
-                val position = bindingAdapterPosition
+                val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onPollClick(getItem(position))
                 }
@@ -42,8 +42,7 @@ class PollsAdapter(
             binding.apply {
                 pollTitle.text = poll.title
                 pollDescription.text = poll.description
-                totalVotes.text = "${poll.totalVotes} votes"
-                // Add more binding as needed
+                totalVotes.text = "Total Votes: ${poll.totalVotes}"
             }
         }
     }

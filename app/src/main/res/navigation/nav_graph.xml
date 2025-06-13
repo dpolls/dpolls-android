@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.blurtopian.dpolls.presentation.home.HomeFragment"
+        android:label="Home" />
+
+    <fragment
+        android:id="@+id/pollsFragment"
+        android:name="com.blurtopian.dpolls.presentation.polls.PollsFragment"
+        android:label="Polls" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.blurtopian.dpolls.presentation.profile.ProfileFragment"
+        android:label="Profile" />
+
+</navigation> 

@@ -3,33 +3,31 @@ package com.blurtopian.dpolls.ui.polls
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.blurtopian.dpolls.data.model.Poll
-import com.blurtopian.dpolls.data.repository.PollsRepository
+import com.blurtopian.dpolls.domain.model.Poll
+import com.blurtopian.dpolls.domain.repository.PollsRepositoryImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class PollsViewModel @Inject constructor(
-    private val pollsRepository: PollsRepository
+    private val repository: PollsRepositoryImpl
 ) : ViewModel() {
     
-    private val _uiState = MutableLiveData<PollsUiState>()
-    val uiState: LiveData<PollsUiState> = _uiState
-    
+    val polls: List<Poll> = repository.getPolls()
+
     init {
-        loadPolls()
+        refreshPolls()
     }
-    
-    private fun loadPolls() {
+
+    fun refreshPolls() {
         viewModelScope.launch {
-            _uiState.value = PollsUiState.Loading
             try {
-                val polls = pollsRepository.getPolls()
-                _uiState.value = PollsUiState.Success(polls)
+                // The Flow will automatically emit new values
             } catch (e: Exception) {
-                _uiState.value = PollsUiState.Error(e.message ?: "Failed to load polls")
+                // Handle error
             }
         }
     }

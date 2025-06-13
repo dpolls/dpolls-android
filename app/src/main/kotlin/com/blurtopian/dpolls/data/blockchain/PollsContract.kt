@@ -1,5 +1,6 @@
 package com.blurtopian.dpolls.data.blockchain
 
+import com.blurtopian.dpolls.domain.model.PollOption
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.FunctionReturnDecoder
 import org.web3j.abi.TypeReference
@@ -51,7 +52,7 @@ class PollsContract @Inject constructor(
         credentials: Credentials,
         title: String,
         description: String,
-        options: List<String>,
+        options: List<PollOption>,
         durationInHours: BigInteger,
         allowMultipleVotes: Boolean
     ): TransactionReceipt {
@@ -60,7 +61,7 @@ class PollsContract @Inject constructor(
             listOf(
                 Utf8String(title),
                 Utf8String(description),
-                DynamicArray(Utf8String::class.java, options.map { Utf8String(it) }),
+                DynamicArray(Utf8String::class.java, options.map { Utf8String(it.text) }),
                 Uint256(durationInHours),
                 Bool(allowMultipleVotes)
             ),
@@ -98,30 +99,29 @@ class PollsContract @Inject constructor(
             GET_POLL_FUNCTION,
             listOf(Uint256(pollId)),
             listOf(
-                TypeReference.create(Uint256::class.java),  // id
-                TypeReference.create(Utf8String::class.java), // title
-                TypeReference.create(Utf8String::class.java), // description
-                TypeReference.create(Address::class.java),   // creator
-                TypeReference.create(Uint256::class.java),   // startTime
-                TypeReference.create(Uint256::class.java),   // endTime
-                TypeReference.create(Bool::class.java),      // isActive
-                TypeReference.create(Uint256::class.java),   // totalVotes
-                TypeReference.create(Uint256::class.java)    // optionsCount
+                TypeReference.create(Utf8String::class.java),
+                TypeReference.create(Utf8String::class.java),
+                TypeReference.create(Address::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(Bool::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(Uint256::class.java)
             )
         )
         
         val result = executeCall(function)
         return if (result.isNotEmpty()) {
             PollDetails(
-                id = (result[0] as Uint256).value,
-                title = (result[1] as Utf8String).value,
-                description = (result[2] as Utf8String).value,
-                creator = (result[3] as Address).value,
-                startTime = (result[4] as Uint256).value,
-                endTime = (result[5] as Uint256).value,
-                isActive = (result[6] as Bool).value,
-                totalVotes = (result[7] as Uint256).value,
-                optionsCount = (result[8] as Uint256).value
+                id = pollId,
+                title = (result[0] as Utf8String).value,
+                description = (result[1] as Utf8String).value,
+                creator = (result[2] as Address).value,
+                startTime = (result[3] as Uint256).value,
+                endTime = (result[4] as Uint256).value,
+                isActive = (result[5] as Bool).value,
+                totalVotes = (result[6] as Uint256).value,
+                optionsCount = (result[7] as Uint256).value
             )
         } else null
     }
@@ -134,8 +134,8 @@ class PollsContract @Inject constructor(
             GET_POLL_OPTIONS_FUNCTION,
             listOf(Uint256(pollId)),
             listOf(
-                TypeReference.create(DynamicArray::class.java, Utf8String::class.java), // texts
-                TypeReference.create(DynamicArray::class.java, Uint256::class.java)     // voteCounts
+                TypeReference.create(DynamicArray::class.java, true),
+                TypeReference.create(DynamicArray::class.java, true)
             )
         )
         
@@ -162,7 +162,7 @@ class PollsContract @Inject constructor(
                 Uint256(limit)
             ),
             listOf(
-                TypeReference.create(DynamicArray::class.java, Uint256::class.java)
+                TypeReference.create(DynamicArray::class.java, true)
             )
         )
         
@@ -180,11 +180,11 @@ class PollsContract @Inject constructor(
             GET_POLL_RESULTS_FUNCTION,
             listOf(Uint256(pollId)),
             listOf(
-                TypeReference.create(Utf8String::class.java), // title
-                TypeReference.create(Uint256::class.java),    // totalVotes
-                TypeReference.create(DynamicArray::class.java, Utf8String::class.java), // optionTexts
-                TypeReference.create(DynamicArray::class.java, Uint256::class.java),    // optionVotes
-                TypeReference.create(DynamicArray::class.java, Uint256::class.java)     // optionPercentages
+                TypeReference.create(Utf8String::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(DynamicArray::class.java, true),
+                TypeReference.create(DynamicArray::class.java, true),
+                TypeReference.create(DynamicArray::class.java, true)
             )
         )
         
@@ -217,10 +217,10 @@ class PollsContract @Inject constructor(
                 Address(voterAddress)
             ),
             listOf(
-                TypeReference.create(Bool::class.java),      // hasVoted
-                TypeReference.create(Uint256::class.java),   // voteTimestamp
-                TypeReference.create(Uint256::class.java),   // optionIndex
-                TypeReference.create(Uint256::class.java)    // weight
+                TypeReference.create(Bool::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(Uint256::class.java),
+                TypeReference.create(Uint256::class.java)
             )
         )
         

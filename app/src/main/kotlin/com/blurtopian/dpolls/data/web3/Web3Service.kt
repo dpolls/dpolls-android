@@ -1,56 +1,143 @@
 package com.blurtopian.dpolls.data.web3
 
-import com.blurtopian.dpolls.data.model.Poll
-import org.web3j.crypto.Credentials
+import androidx.lifecycle.LiveData
+import com.blurtopian.dpolls.data.blockchain.PollsContract
+import com.blurtopian.dpolls.data.blockchain.WalletManager
+import com.blurtopian.dpolls.domain.model.Poll
+import com.blurtopian.dpolls.domain.model.PollOption
 import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
+import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.tx.gas.ContractGasProvider
+import java.math.BigInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class Web3Service @Inject constructor() {
-    private lateinit var web3j: Web3j
-    private lateinit var credentials: Credentials
-    private lateinit var contract: PollsContract
-    
+class Web3Service @Inject constructor(
+    private val web3j: Web3j,
+    private val walletManager: WalletManager,
+    private val gasProvider: ContractGasProvider
+) {
+    private var pollsContract: PollsContract? = null
+    private val contractAddress = "YOUR_CONTRACT_ADDRESS"
+
     init {
-        initializeWeb3()
+        initializeContract()
     }
-    
-    private fun initializeWeb3() {
-        // Initialize Web3j with your provider URL
-        web3j = Web3j.build(HttpService("https://rpc-testnet.nerochain.io"))
-        
-        // Initialize credentials (you'll need to implement secure storage for private keys)
-        // credentials = Credentials.create("YOUR_PRIVATE_KEY")
-        
-        // Initialize contract
-        // contract = PollsContract.load(
-        //     "YOUR_CONTRACT_ADDRESS",
-        //     web3j,
-        //     credentials,
-        //     ContractGasProvider()
-        // )
+
+    private fun initializeContract() {
+        try {
+            val credentials = walletManager.getCurrentCredentials() ?: return
+            pollsContract = PollsContract(web3j, contractAddress)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
-    
-    suspend fun getPolls(): List<Poll> {
-        // Implement contract call to get polls
-        return emptyList() // Placeholder
+
+    suspend fun getPoll(pollId: String): Poll? {
+        return try {
+            val contract = pollsContract ?: return null
+            val poll = contract.getPoll(BigInteger(pollId)) ?: return null
+            val options = contract.getPollOptions(BigInteger(pollId)) ?: return null
+            
+            Poll(
+                id = pollId,
+                title = poll.title,
+                description = poll.description,
+                creator = poll.creator,
+                startTime = poll.startTime.toLong(),
+                endTime = poll.endTime.toLong(),
+                options = options.texts.zip(options.voteCounts).mapIndexed { index, (text, voteCount) ->
+                    PollOption(
+                        id = index.toString(),
+                        text = text,
+                        voteCount = voteCount
+                    )
+                },
+                isActive = poll.isActive,
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
-    
-    suspend fun getPoll(id: String): Poll {
-        // Implement contract call to get specific poll
-        throw NotImplementedError()
+
+    suspend fun createPoll(
+        poll: Poll
+    ): TransactionReceipt? {
+        val title: String = poll.title
+        val description: String = poll.description
+        val options: List<PollOption> = poll.options;
+        val durationHours: Long = poll.getDurationHours();
+        return try {
+            val contract = pollsContract ?: return null
+            val credentials = walletManager.getCurrentCredentials() ?: return null
+            
+            contract.createPoll(
+                credentials = credentials,
+                title = title,
+                description = description,
+                options = options,
+                durationInHours = BigInteger.valueOf(durationHours),
+                allowMultipleVotes = false
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
-    
-    suspend fun createPoll(poll: Poll): String {
-        // Implement contract call to create poll
-        throw NotImplementedError()
+
+    suspend fun vote(pollId: String, optionIndex: String): TransactionReceipt? {
+        return try {
+            val contract = pollsContract ?: return null
+            val credentials = walletManager.getCurrentCredentials() ?: return null
+            
+            contract.vote(
+                credentials = credentials,
+                pollId = BigInteger(pollId),
+                optionIndex = BigInteger.valueOf(optionIndex.toLong())
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
-    
-    suspend fun vote(pollId: String, optionId: String) {
-        // Implement contract call to vote
-        throw NotImplementedError()
+
+    suspend fun updatePoll(
+        pollId: String,
+        title: String,
+        description: String
+    ): TransactionReceipt? {
+        return try {
+            val contract = pollsContract ?: return null
+            val credentials = walletManager.getCurrentCredentials() ?: return null
+            
+            contract.endPoll(
+                credentials = credentials,
+                pollId = BigInteger(pollId)
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun deletePoll(pollId: String): TransactionReceipt? {
+        return try {
+            val contract = pollsContract ?: return null
+            val credentials = walletManager.getCurrentCredentials() ?: return null
+            
+            contract.endPoll(
+                credentials = credentials,
+                pollId = BigInteger(pollId)
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun getPolls(): List<Poll> {
+        TODO("Not yet implemented")
     }
 } 

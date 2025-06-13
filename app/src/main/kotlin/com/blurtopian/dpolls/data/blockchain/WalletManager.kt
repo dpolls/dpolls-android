@@ -1,7 +1,7 @@
 package com.blurtopian.dpolls.data.blockchain
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.net.Uri
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -11,12 +11,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.web3j.crypto.Credentials
-import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Keys
+import org.web3j.crypto.Sign
 import org.web3j.crypto.WalletUtils
-import java.math.BigInteger
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.net.toUri
 
 /**
  * Manager for wallet operations and Web3Auth integration
@@ -34,18 +34,23 @@ class WalletManager @Inject constructor(
         private const val KEY_PROVIDER_TYPE = "provider_type"
         
         // Web3Auth configuration
-        private const val WEB3AUTH_CLIENT_ID = "your_web3auth_client_id_here"
-        private const val WEB3AUTH_REDIRECT_URL = "pollsdapp://auth"
+        private const val WEB3AUTH_CLIENT_ID = "YOUR_WEB3AUTH_CLIENT_ID"
+        private const val WEB3AUTH_REDIRECT_URL = "com.blurtopian.dpolls://web3auth"
     }
     
     private var web3Auth: Web3Auth? = null
-    private var encryptedPrefs: SharedPreferences? = null
+    private var encryptedPrefs: EncryptedSharedPreferences? = null
     private var currentCredentials: Credentials? = null
     
     enum class ProviderType {
         WEB3AUTH,
         PRIVATE_KEY,
         NONE
+    }
+    
+    init {
+        initializeEncryptedPrefs()
+        initializeWeb3Auth()
     }
     
     /**
@@ -58,19 +63,13 @@ class WalletManager @Inject constructor(
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
             
-            encryptedPrefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-            
-            // Initialize Web3Auth
-            initializeWeb3Auth()
-            
-            // Restore previous session if exists
-            restoreSession()
+            encryptedPrefs?.let {
+                // Initialize Web3Auth
+                initializeWeb3Auth()
+                
+                // Restore previous session if exists
+                restoreSession()
+            }
             
             Log.d(TAG, "Wallet manager initialized successfully")
             return@withContext true
@@ -87,23 +86,22 @@ class WalletManager @Inject constructor(
     private fun initializeWeb3Auth() {
         try {
             val web3AuthOptions = Web3AuthOptions(
-                context = context,
                 clientId = WEB3AUTH_CLIENT_ID,
-                network = Web3Auth.Network.TESTNET, // Use MAINNET for production
-                redirectUrl = Uri.parse(WEB3AUTH_REDIRECT_URL),
+                network = Network.TESTNET,
+                redirectUrl = WEB3AUTH_REDIRECT_URL.toUri(),
                 whiteLabel = WhiteLabelData(
-                    name = "Polls dApp",
+                    appName = "Polls dApp",
                     logoLight = "https://your-logo-url.com/logo-light.png",
                     logoDark = "https://your-logo-url.com/logo-dark.png",
-                    defaultLanguage = "en",
-                    dark = true,
+                    defaultLanguage = Language.EN,
+                    mode = ThemeModes.DARK,
                     theme = hashMapOf(
                         "primary" to "#1976D2"
                     )
                 )
             )
             
-            web3Auth = Web3Auth(web3AuthOptions)
+            web3Auth = Web3Auth(web3AuthOptions, context)
             
             // Set result callback
             web3Auth?.setResultUrl(Uri.parse(WEB3AUTH_REDIRECT_URL))
@@ -127,34 +125,34 @@ class WalletManager @Inject constructor(
             val loginParams = LoginParams(
                 loginProvider = loginProvider,
                 extraLoginOptions = ExtraLoginOptions(
-                    display = "popup",
-                    prompt = "login"
+                    display = Display.POPUP,
+                    prompt = Prompt.LOGIN
                 )
             )
-            
-            val web3AuthResponse = web3AuthInstance.login(loginParams)
-            
-            if (web3AuthResponse.error != null) {
-                Log.e(TAG, "Web3Auth login error: ${web3AuthResponse.error}")
-                return@withContext false
+
+            val web3AuthResponseFuture = web3AuthInstance.login(loginParams);
+            web3AuthResponseFuture.whenComplete { web3AuthResponse, throwable ->
+                if (web3AuthResponse.error != null) {
+                    Log.e(TAG, "Web3Auth login error: ${web3AuthResponse.error}")
+                    return@whenComplete
+                }
+
+                val privateKey = web3AuthResponse.privKey
+                if (privateKey.isNullOrEmpty()) {
+                    Log.e(TAG, "No private key received from Web3Auth")
+                    return@whenComplete
+                }
+                // Create credentials from private key
+                val credentials = Credentials.create(privateKey)
+                currentCredentials = credentials
+
+                // Save to encrypted preferences
+                saveWalletInfo(privateKey, credentials.address, ProviderType.WEB3AUTH)
+
+                Log.d(TAG, "Successfully connected with Web3Auth")
+                Log.d(TAG, "Address: ${credentials.address}")
             }
-            
-            val privateKey = web3AuthResponse.privKey
-            if (privateKey.isNullOrEmpty()) {
-                Log.e(TAG, "No private key received from Web3Auth")
-                return@withContext false
-            }
-            
-            // Create credentials from private key
-            val credentials = Credentials.create(privateKey)
-            currentCredentials = credentials
-            
-            // Save to encrypted preferences
-            saveWalletInfo(privateKey, credentials.address, ProviderType.WEB3AUTH)
-            
-            Log.d(TAG, "Successfully connected with Web3Auth")
-            Log.d(TAG, "Address: ${credentials.address}")
-            
+
             return@withContext true
             
         } catch (e: Exception) {
@@ -256,7 +254,7 @@ class WalletManager @Inject constructor(
             val credentials = currentCredentials ?: return@withContext null
             
             val messageBytes = message.toByteArray()
-            val signature = org.web3j.crypto.Sign.signPrefixedMessage(messageBytes, credentials.ecKeyPair)
+            val signature = Sign.signPrefixedMessage(messageBytes, credentials.ecKeyPair)
             
             // Combine r, s, v into signature string
             val r = signature.r
@@ -290,13 +288,7 @@ class WalletManager @Inject constructor(
             currentCredentials = null
             
             // Clear encrypted preferences
-            encryptedPrefs?.edit()?.apply {
-                remove(KEY_PRIVATE_KEY)
-                remove(KEY_ADDRESS)
-                putBoolean(KEY_IS_CONNECTED, false)
-                remove(KEY_PROVIDER_TYPE)
-                apply()
-            }
+            clearWalletInfo()
             
             Log.d(TAG, "Wallet disconnected")
             return@withContext true
@@ -371,6 +363,36 @@ class WalletManager @Inject constructor(
             "${address.substring(0, 6)}...${address.substring(address.length - 4)}"
         } else {
             "Unknown"
+        }
+    }
+
+    private fun initializeEncryptedPrefs() {
+        try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            encryptedPrefs = EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            ) as EncryptedSharedPreferences
+
+            Log.d(TAG, "Encrypted preferences initialized")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize encrypted preferences", e)
+        }
+    }
+
+    private fun clearWalletInfo() {
+        encryptedPrefs?.edit()?.apply {
+            remove(KEY_PRIVATE_KEY)
+            remove(KEY_ADDRESS)
+            remove(KEY_PROVIDER_TYPE)
+            putBoolean(KEY_IS_CONNECTED, false)
+            apply()
         }
     }
 }

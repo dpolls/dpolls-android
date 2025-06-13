@@ -16,7 +16,7 @@ class PollsFragment : Fragment() {
     private var _binding: FragmentPollsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: PollsViewModel by viewModels()
-    private lateinit var pollsAdapter: PollsAdapter
+    private lateinit var adapter: PollsAdapter
     
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -30,45 +30,21 @@ class PollsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
-        setupUI()
-        observeViewModel()
+        observePolls()
     }
     
     private fun setupRecyclerView() {
-        pollsAdapter = PollsAdapter { poll ->
+        adapter = PollsAdapter { poll ->
             // Handle poll click
-            viewModel.onPollSelected(poll)
         }
         binding.pollsRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = pollsAdapter
+            adapter = this@PollsFragment.adapter
         }
     }
     
-    private fun setupUI() {
-        binding.createPollFab.setOnClickListener {
-            viewModel.onCreatePollClicked()
-        }
-    }
-    
-    private fun observeViewModel() {
-        viewModel.uiState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                is PollsUiState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.pollsRecyclerView.visibility = View.GONE
-                }
-                is PollsUiState.Success -> {
-                    binding.progressBar.visibility = View.GONE
-                    binding.pollsRecyclerView.visibility = View.VISIBLE
-                    pollsAdapter.submitList(state.polls)
-                }
-                is PollsUiState.Error -> {
-                    binding.progressBar.visibility = View.GONE
-                    // Show error message
-                }
-            }
-        }
+    private fun observePolls() {
+        adapter.submitList(viewModel.polls)
     }
     
     override fun onDestroyView() {

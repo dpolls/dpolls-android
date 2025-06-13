@@ -1,30 +1,31 @@
 package com.blurtopian.dpolls.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 import java.math.BigInteger
 
 /**
  * Domain model for a poll
  */
+@Parcelize
 data class Poll(
-    val id: BigInteger,
+    val id: String,
     val title: String,
     val description: String,
     val creator: String,
-    val startTime: BigInteger,
-    val endTime: BigInteger,
-    val isActive: Boolean,
-    val totalVotes: BigInteger,
+    val startTime: Long,
+    val endTime: Long,
     val options: List<PollOption>,
-    val userVote: UserVote? = null
-) {
+    val isActive: Boolean = true,
+    val totalVotes: BigInteger = BigInteger.ZERO,
+) : Parcelable {
     /**
      * Check if poll is currently active and within time bounds
      */
     fun isCurrentlyActive(): Boolean {
         val currentTime = System.currentTimeMillis() / 1000
-        return isActive && 
-               currentTime >= startTime.toLong() && 
-               currentTime <= endTime.toLong()
+        return isActive && currentTime >= startTime && currentTime <= endTime
     }
     
     /**
@@ -32,42 +33,28 @@ data class Poll(
      */
     fun getTimeRemainingSeconds(): Long {
         val currentTime = System.currentTimeMillis() / 1000
-        val endTimeSeconds = endTime.toLong()
-        return if (endTimeSeconds > currentTime) {
-            endTimeSeconds - currentTime
-        } else {
-            0L
-        }
-    }
-    
-    /**
-     * Check if user has voted
-     */
-    fun hasUserVoted(): Boolean = userVote?.hasVoted == true
-    
-    /**
-     * Get winning option (option with most votes)
-     */
-    fun getWinningOption(): PollOption? {
-        return options.maxByOrNull { it.voteCount }
+        return if (endTime > currentTime) {
+            endTime - currentTime
+        } else 0
     }
     
     /**
      * Get poll duration in hours
      */
     fun getDurationHours(): Long {
-        return (endTime.toLong() - startTime.toLong()) / 3600
+        return (endTime - startTime) / 3600
     }
 }
 
 /**
  * Domain model for a poll option
  */
+@Parcelize
 data class PollOption(
-    val index: Int,
+    val id: String,
     val text: String,
-    val voteCount: BigInteger
-) {
+    val voteCount: @RawValue BigInteger = BigInteger.ZERO
+) : Parcelable {
     /**
      * Calculate percentage of total votes
      */
@@ -83,12 +70,14 @@ data class PollOption(
 /**
  * Domain model for user's vote information
  */
+@Parcelize
 data class UserVote(
+    val pollId: String,
     val hasVoted: Boolean,
-    val voteTimestamp: BigInteger,
-    val optionIndex: BigInteger,
-    val weight: BigInteger
-) {
+    val optionIndex: @RawValue BigInteger,
+    val weight: @RawValue BigInteger,
+    val voteTimestamp: @RawValue BigInteger
+) : Parcelable {
     /**
      * Get vote date as timestamp
      */
@@ -101,7 +90,7 @@ data class UserVote(
 data class CreatePollRequest(
     val title: String,
     val description: String,
-    val options: List<String>,
+    val options: List<PollOption>,
     val durationInHours: Int,
     val allowMultipleVotes: Boolean = false
 ) {
@@ -136,10 +125,10 @@ data class CreatePollRequest(
         }
         
         options.forEachIndexed { index, option ->
-            if (option.isBlank()) {
+            if (option.text.isBlank()) {
                 errors.add("Option ${index + 1} cannot be empty")
             }
-            if (option.length > 100) {
+            if (option.text.length > 100) {
                 errors.add("Option ${index + 1} cannot exceed 100 characters")
             }
         }
@@ -165,7 +154,7 @@ data class CreatePollRequest(
  * Domain model for voting on a poll
  */
 data class VoteRequest(
-    val pollId: BigInteger,
+    val pollId: String,
     val optionIndex: Int
 )
 
@@ -179,7 +168,7 @@ data class PollResults(
     /**
      * Get total votes across all options
      */
-    fun getTotalVotes(): BigInteger = poll.totalVotes
+    fun getTotalVotes(): BigInteger = poll.options.sumOf { it.voteCount }
     
     /**
      * Get winning option result
