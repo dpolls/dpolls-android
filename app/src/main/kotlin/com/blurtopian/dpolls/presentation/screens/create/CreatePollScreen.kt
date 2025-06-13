@@ -26,7 +26,7 @@ fun CreatePollScreen(
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var options by remember { mutableStateOf(mutableListOf("", "")) }
+    var options by remember { mutableStateOf(mutableListOf("a", "b")) }
     var duration by remember { mutableStateOf("24") }
     var isCreating by remember { mutableStateOf(false) }
     
@@ -96,7 +96,9 @@ fun CreatePollScreen(
                     OutlinedTextField(
                         value = option,
                         onValueChange = { newValue ->
-                            options[index] = newValue
+                            options = options.toMutableList().apply {
+                                this[index] = newValue
+                            }
                         },
                         label = { Text("Option ${index + 1}") },
                         modifier = Modifier.weight(1f),
