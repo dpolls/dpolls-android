@@ -10,12 +10,27 @@ import com.blurtopian.dpolls.presentation.screens.polls.PollsScreen
 import com.blurtopian.dpolls.presentation.screens.create.CreatePollScreen
 import com.blurtopian.dpolls.presentation.screens.vote.VoteScreen
 import com.blurtopian.dpolls.presentation.screens.wallet.WalletScreen
+import com.blurtopian.dpolls.data.blockchain.WalletManager
+import com.blurtopian.dpolls.data.web3.Web3Service
+import com.blurtopian.dpolls.domain.repository.PollsRepositoryImpl
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import org.web3j.tx.gas.DefaultGasProvider
+import android.content.Context
 
 @Composable
 fun PollsNavigation(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    context: Context
 ) {
+    // Initialize Web3 dependencies
+    val web3j = Web3j.build(HttpService("https://nero-rpc-url")) // Replace with actual RPC URL
+    val walletManager = WalletManager(context)
+    val gasProvider = DefaultGasProvider()
+    val web3Service = Web3Service(web3j, walletManager, gasProvider)
+    val pollsRepository = PollsRepositoryImpl(web3Service)
+
     NavHost(
         navController = navController,
         startDestination = "home",
@@ -34,7 +49,8 @@ fun PollsNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToVote = { pollId -> 
                     navController.navigate("vote/$pollId")
-                }
+                },
+                repository = pollsRepository
             )
         }
         

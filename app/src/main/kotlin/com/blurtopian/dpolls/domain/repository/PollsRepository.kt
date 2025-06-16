@@ -7,7 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface PollsRepository {
-    fun getPolls(): List<Poll>
+    suspend fun getPolls(): List<Poll>
     suspend fun getPoll(id: String): Poll?
     suspend fun createPoll(poll: Poll): String?
     suspend fun vote(pollId: String, optionId: String)
@@ -18,7 +18,7 @@ class PollsRepositoryImpl @Inject constructor(
     private val web3Service: Web3Service
 ) : PollsRepository {
     
-    override fun getPolls(): List<Poll> {
+    override suspend fun getPolls(): List<Poll> {
         return web3Service.getPolls()
     }
     
