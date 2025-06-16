@@ -10,24 +10,44 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.blurtopian.dpolls.data.blockchain.WalletManager
+import com.blurtopian.dpolls.data.web3.Web3Service
+import com.blurtopian.dpolls.domain.model.Poll
+import com.blurtopian.dpolls.domain.repository.PollsRepository
+import com.blurtopian.dpolls.domain.repository.PollsRepositoryImpl
 import com.blurtopian.dpolls.presentation.theme.PollsDAppTheme
+import kotlinx.coroutines.launch
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import org.web3j.tx.gas.ContractGasProvider
+import org.web3j.tx.gas.DefaultGasProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PollsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToVote: (String) -> Unit
+    onNavigateToVote: (String) -> Unit,
+    repository: PollsRepositoryImpl
 ) {
-    // Mock data for preview
-    val mockPolls = remember {
-        listOf(
-            PollItem("1", "Favorite Programming Language", "What's your favorite programming language for blockchain development?", 156, true),
-            PollItem("2", "Best DeFi Protocol", "Which DeFi protocol do you trust the most?", 89, true),
-            PollItem("3", "NFT Market Prediction", "Where do you think the NFT market is heading?", 234, false)
-        )
+    var polls by remember { mutableStateOf<List<Poll>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    fun loadPolls() {
+        scope.launch {
+            isLoading = true
+            polls = repository.getPolls()
+            isLoading = false
+        }
+    }
+
+    // Load polls when the screen is first displayed
+    LaunchedEffect(Unit) {
+        loadPolls()
     }
     
     Column(
@@ -50,7 +70,7 @@ fun PollsScreen(
                 }
             },
             actions = {
-                IconButton(onClick = { /* Refresh polls */ }) {
+                IconButton(onClick = { loadPolls() }) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh"
@@ -59,17 +79,32 @@ fun PollsScreen(
             }
         )
         
-        // Polls List
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(mockPolls) { poll ->
-                PollCard(
-                    poll = poll,
-                    onVoteClick = { onNavigateToVote(poll.id) }
-                )
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            // Polls List
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(polls) { poll ->
+                    PollCard(
+                        poll = PollItem(
+                            id = poll.id,
+                            title = poll.title,
+                            description = poll.description,
+                            totalVotes = poll.options.sumOf { it.voteCount.toInt() },
+                            isActive = poll.isActive
+                        ),
+                        onVoteClick = { onNavigateToVote(poll.id) }
+                    )
+                }
             }
         }
     }
@@ -175,9 +210,14 @@ data class PollItem(
 @Composable
 fun PollsScreenPreview() {
     PollsDAppTheme {
+        val mockWeb3j = Web3j.build(HttpService("https://mock-rpc-url"))
+        val mockWalletManager = WalletManager(LocalContext.current)
+        val mockGasProvider: ContractGasProvider = DefaultGasProvider()
+        
         PollsScreen(
             onNavigateBack = {},
-            onNavigateToVote = {}
+            onNavigateToVote = {},
+            repository = PollsRepositoryImpl(Web3Service(mockWeb3j, mockWalletManager, mockGasProvider))
         )
     }
 }

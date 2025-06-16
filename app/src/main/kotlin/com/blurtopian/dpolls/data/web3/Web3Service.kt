@@ -19,7 +19,7 @@ class Web3Service @Inject constructor(
     private val gasProvider: ContractGasProvider
 ) {
     private var pollsContract: PollsContract? = null
-    private val contractAddress = "YOUR_CONTRACT_ADDRESS"
+    private val contractAddress = "0x71322f1Bb13f0857410f2ebd4BC6ad731f2De6E5"
 
     init {
         initializeContract()
@@ -137,7 +137,36 @@ class Web3Service @Inject constructor(
         }
     }
 
-    fun getPolls(): List<Poll> {
-        TODO("Not yet implemented")
+    suspend fun getPolls(): List<Poll> {
+        return try {
+            val contract = pollsContract ?: return emptyList()
+            val pollCount = contract.getTotalPollsCount().toInt()
+            
+            (0 until pollCount).mapNotNull { index ->
+                val pollId = BigInteger.valueOf(index.toLong())
+                val poll = contract.getPoll(pollId) ?: return@mapNotNull null
+                val options = contract.getPollOptions(pollId) ?: return@mapNotNull null
+                
+                Poll(
+                    id = pollId.toString(),
+                    title = poll.title,
+                    description = poll.description,
+                    creator = poll.creator,
+                    startTime = poll.startTime.toLong(),
+                    endTime = poll.endTime.toLong(),
+                    options = options.texts.zip(options.voteCounts).mapIndexed { optIndex, (text, voteCount) ->
+                        PollOption(
+                            id = optIndex.toString(),
+                            text = text,
+                            voteCount = voteCount
+                        )
+                    },
+                    isActive = poll.isActive
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 } 

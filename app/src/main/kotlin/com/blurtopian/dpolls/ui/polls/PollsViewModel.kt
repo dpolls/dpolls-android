@@ -1,13 +1,13 @@
 package com.blurtopian.dpolls.ui.polls
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.blurtopian.dpolls.domain.model.Poll
 import com.blurtopian.dpolls.domain.repository.PollsRepositoryImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,7 +16,8 @@ class PollsViewModel @Inject constructor(
     private val repository: PollsRepositoryImpl
 ) : ViewModel() {
     
-    val polls: List<Poll> = repository.getPolls()
+    private val _uiState = MutableStateFlow<PollsUiState>(PollsUiState.Loading)
+    val uiState: StateFlow<PollsUiState> = _uiState.asStateFlow()
 
     init {
         refreshPolls()
@@ -25,9 +26,11 @@ class PollsViewModel @Inject constructor(
     fun refreshPolls() {
         viewModelScope.launch {
             try {
-                // The Flow will automatically emit new values
+                _uiState.value = PollsUiState.Loading
+                val polls = repository.getPolls()
+                _uiState.value = PollsUiState.Success(polls)
             } catch (e: Exception) {
-                // Handle error
+                _uiState.value = PollsUiState.Error(e.message ?: "Unknown error occurred")
             }
         }
     }
