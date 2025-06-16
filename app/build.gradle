@@ -27,7 +27,7 @@ android {
         // Blockchain configuration
         buildConfigField "String", "NERO_RPC_URL", '"https://rpc.nerochain.io"'
         buildConfigField "String", "NERO_CHAIN_ID", '"1329"'
-        buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x0000000000000000000000000000000000000000"'
+        buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x71322f1Bb13f0857410f2ebd4BC6ad731f2De6E5"'
     }
 
     buildTypes {
