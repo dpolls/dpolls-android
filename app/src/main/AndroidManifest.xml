@@ -47,6 +47,7 @@
 
         <!-- Main Activity -->
         <activity
+            android:launchMode="singleTop"
             android:name=".presentation.main.MainActivity"
             android:exported="false"
             android:theme="@style/Theme.Dpolls"

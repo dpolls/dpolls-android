@@ -1,5 +1,6 @@
 package com.blurtopian.dpolls.presentation.screens.polls
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.blurtopian.dpolls.data.blockchain.WalletManager
-import com.blurtopian.dpolls.data.web3.Web3Service
+    import com.blurtopian.dpolls.data.web3.Web3Service
 import com.blurtopian.dpolls.domain.model.Poll
 import com.blurtopian.dpolls.domain.repository.PollsRepository
 import com.blurtopian.dpolls.domain.repository.PollsRepositoryImpl
@@ -40,7 +41,12 @@ fun PollsScreen(
     fun loadPolls() {
         scope.launch {
             isLoading = true
+            Log.d("PollsScreen", "Fetching polls...")
             polls = repository.getPolls()
+            Log.d("PollsScreen", "Received polls: ${polls.size} items")
+            polls.forEachIndexed { index, poll ->
+                Log.d("PollsScreen", "Poll $index: id=${poll.id}, title=${poll.title}, active=${poll.isActive}")
+            }
             isLoading = false
         }
     }

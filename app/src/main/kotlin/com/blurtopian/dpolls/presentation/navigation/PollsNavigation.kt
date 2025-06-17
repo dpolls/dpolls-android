@@ -17,20 +17,18 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import org.web3j.tx.gas.DefaultGasProvider
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
 @Composable
 fun PollsNavigation(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    context: Context
+    @ApplicationContext context: Context,
+    walletManager: WalletManager,
+    web3Service: Web3Service,
+    pollsRepository: PollsRepositoryImpl
 ) {
-    // Initialize Web3 dependencies
-    val web3j = Web3j.build(HttpService("https://nero-rpc-url")) // Replace with actual RPC URL
-    val walletManager = WalletManager(context)
-    val gasProvider = DefaultGasProvider()
-    val web3Service = Web3Service(web3j, walletManager, gasProvider)
-    val pollsRepository = PollsRepositoryImpl(web3Service)
-
     NavHost(
         navController = navController,
         startDestination = "home",
@@ -75,7 +73,8 @@ fun PollsNavigation(
         
         composable("wallet") {
             WalletScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                walletManager = walletManager
             )
         }
     }

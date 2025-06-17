@@ -5,6 +5,7 @@ import com.blurtopian.dpolls.data.blockchain.PollsContract
 import com.blurtopian.dpolls.data.blockchain.WalletManager
 import com.blurtopian.dpolls.domain.model.Poll
 import com.blurtopian.dpolls.domain.model.PollOption
+import com.blurtopian.dpolls.common.NetworkConstants
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.tx.gas.ContractGasProvider
@@ -19,7 +20,8 @@ class Web3Service @Inject constructor(
     private val gasProvider: ContractGasProvider
 ) {
     private var pollsContract: PollsContract? = null
-    private val contractAddress = "0x71322f1Bb13f0857410f2ebd4BC6ad731f2De6E5"
+    private var pollsContractKeth: PollsContract? = null
+    private val contractAddress = NetworkConstants.CONTRACT_ADDRESS
 
     init {
         initializeContract()
@@ -29,6 +31,7 @@ class Web3Service @Inject constructor(
         try {
             val credentials = walletManager.getCurrentCredentials() ?: return
             pollsContract = PollsContract(web3j, contractAddress)
+            pollsContractKeth = PollsContract(web3j, contractAddress)
         } catch (e: Exception) {
             e.printStackTrace()
         }
