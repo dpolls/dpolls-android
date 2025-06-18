@@ -55,6 +55,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun finish() {
+        super.finish()
+    }
 }
 
 @Composable

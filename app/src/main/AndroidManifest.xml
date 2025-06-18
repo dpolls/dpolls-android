@@ -4,6 +4,10 @@
     package="com.blurtopian.dpolls">
 
     <!-- Network permissions for blockchain interaction -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
@@ -31,7 +35,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Dpolls"
         android:usesCleartextTraffic="true"
-        tools:targetApi="31"
         tools:replace="android:allowBackup,android:fullBackupContent">
 
         <!-- Splash Screen Activity -->
@@ -52,20 +55,6 @@
             android:exported="false"
             android:theme="@style/Theme.Dpolls"
             android:windowSoftInputMode="adjustResize" />
-
-        <!-- Web3Auth Redirect Activity -->
-        <activity
-            android:name="com.web3auth.core.Web3AuthActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            tools:replace="android:name">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="pollsdapp" />
-            </intent-filter>
-        </activity>
 
         <!-- Firebase Messaging Service -->
         <service

@@ -3,7 +3,11 @@ package com.blurtopian.dpolls.presentation.splash
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.blurtopian.dpolls.presentation.main.MainActivity
@@ -18,9 +22,33 @@ class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        
-        // Keep splash screen visible while loading
+
+        // Set the layout for the splash screen content.
+        // This will be shown *during* the splash screen period.
+        //setContentView(R.layout.splash_screen_layout)
+
+        // Keep the splash screen visible for this Activity
+        // You can use this to customize the exit animation
         splashScreen.setKeepOnScreenCondition { true }
+
+
+        // Enable edge-to-edge display (optional, for modern look)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT
+            )
+        )
+
+        // Simulate loading or navigate to your MainActivity
+        // For a real app, you'd perform initialization here.
+        Handler(Looper.getMainLooper()).postDelayed({
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()
+        }, 2000) // Adjust delay as needed
         
         // Initialize app and navigate to main activity
         lifecycleScope.launch {

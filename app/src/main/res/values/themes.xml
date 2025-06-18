@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.Dpolls" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.Dpolls" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
@@ -15,15 +15,9 @@
         <!-- Customize your theme here. -->
     </style>
 
-    <!-- Splash screen theme -->
-    <style name="Theme.Dpolls.SplashScreen" parent="Theme.Dpolls">
-        <item name="android:windowBackground">@drawable/splash_background</item>
-        <item name="android:statusBarColor">@color/purple_500</item>
-    </style>
-
     <style name="Theme.Dpolls.Splash" parent="Theme.SplashScreen">
         <!-- Set your brand color -->
-        <item name="windowSplashScreenBackground">@color/purple_500</item>
+        <item name="windowSplashScreenBackground">@color/white</item>
         <!-- Set your logo (should be a 96x96dp PNG or vector) -->
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <!-- Optional: duration for icon animation -->
