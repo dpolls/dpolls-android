@@ -19,7 +19,7 @@
         <!-- Set your brand color -->
         <item name="windowSplashScreenBackground">@color/white</item>
         <!-- Set your logo (should be a 96x96dp PNG or vector) -->
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_splash_v3</item>
         <!-- Optional: duration for icon animation -->
         <item name="postSplashScreenTheme">@style/Theme.Dpolls</item>
     </style>
