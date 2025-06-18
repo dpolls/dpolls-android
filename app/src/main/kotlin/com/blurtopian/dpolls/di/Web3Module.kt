@@ -1,5 +1,6 @@
 package com.blurtopian.dpolls.di
 
+import com.blurtopian.dpolls.common.NetworkConstants
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,9 +30,7 @@ object Web3Module {
     @Provides
     @Singleton
     fun provideWeb3j(okHttpClient: OkHttpClient): Web3j {
-        // Replace with your actual RPC URL
-        val rpcUrl = "YOUR_RPC_URL"
-        return Web3j.build(HttpService(rpcUrl, okHttpClient))
+        return Web3j.build(HttpService(NetworkConstants.RPC_URL, okHttpClient))
     }
 
     @Provides

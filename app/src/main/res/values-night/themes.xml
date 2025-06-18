@@ -14,9 +14,10 @@
         <!-- Customize your theme here. -->
     </style>
 
+
     <style name="Theme.Dpolls.Splash" parent="Theme.SplashScreen">
         <!-- Set your brand color -->
-        <item name="windowSplashScreenBackground">@color/purple_500</item>
+        <item name="windowSplashScreenBackground">@color/white</item>
         <!-- Set your logo (should be a 96x96dp PNG or vector) -->
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <!-- Optional: duration for icon animation -->

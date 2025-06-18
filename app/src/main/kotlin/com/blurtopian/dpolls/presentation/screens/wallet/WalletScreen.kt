@@ -1,32 +1,89 @@
 package com.blurtopian.dpolls.presentation.screens.wallet
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.blurtopian.dpolls.data.blockchain.WalletManager
 import com.blurtopian.dpolls.presentation.theme.PollsDAppTheme
+import com.web3auth.core.types.Provider
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    walletManager: WalletManager
 ) {
-    // Mock wallet data
-    var isConnected by remember { mutableStateOf(false) }
-    var walletAddress by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Wallet state
+    var isConnected by remember { mutableStateOf(walletManager.isConnected()) }
+    var walletAddress by remember { mutableStateOf(walletManager.getCurrentAddress() ?: "") }
     var balance by remember { mutableStateOf("0.0") }
     var isConnecting by remember { mutableStateOf(false) }
+    var showError by remember { mutableStateOf<String?>(null) }
+    
+    // Handle Web3Auth login
+    val handleWeb3AuthLogin = { provider: Provider ->
+        scope.launch {
+            isConnecting = true
+            showError = null
+            
+            try {
+                val success = walletManager.connectWithWeb3Auth(provider)
+                if (success) {
+                    isConnected = true
+                    walletAddress = walletManager.getCurrentAddress() ?: ""
+                } else {
+                    showError = "Failed to connect wallet"
+                }
+            } catch (e: Exception) {
+                showError = e.message ?: "An error occurred"
+            } finally {
+                isConnecting = false
+            }
+        }
+    }
     
     Column(
         modifier = Modifier.fillMaxSize()
@@ -90,15 +147,9 @@ fun WalletScreen(
                             
                             Spacer(modifier = Modifier.height(24.dp))
                             
+                            // Web3Auth Login Buttons
                             Button(
-                                onClick = {
-                                    isConnecting = true
-                                    // Simulate connection
-                                    walletAddress = "0x1234...5678"
-                                    balance = "1.25"
-                                    isConnected = true
-                                    isConnecting = false
-                                },
+                                onClick = { handleWeb3AuthLogin(Provider.GOOGLE) },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !isConnecting
                             ) {
@@ -110,8 +161,27 @@ fun WalletScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("Connecting...")
                                 } else {
-                                    Text("Connect Wallet")
+                                    Text("Connect with Google")
                                 }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            OutlinedButton(
+                                onClick = { handleWeb3AuthLogin(Provider.FACEBOOK) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isConnecting
+                            ) {
+                                Text("Connect with Facebook")
+                            }
+                            
+                            if (showError != null) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = showError!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
                     }
@@ -224,9 +294,12 @@ fun WalletScreen(
                 item {
                     OutlinedButton(
                         onClick = {
-                            isConnected = false
-                            walletAddress = ""
-                            balance = "0.0"
+                            scope.launch {
+                                walletManager.disconnect()
+                                isConnected = false
+                                walletAddress = ""
+                                balance = "0.0"
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -294,10 +367,14 @@ fun WalletScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun WalletScreenPreview() {
+private fun WalletScreenPreview() {
+    val context = LocalContext.current
+    val walletManager = WalletManager(context)
+    
     PollsDAppTheme {
         WalletScreen(
-            onNavigateBack = {}
+            onNavigateBack = {},
+            walletManager = walletManager
         )
     }
 }
