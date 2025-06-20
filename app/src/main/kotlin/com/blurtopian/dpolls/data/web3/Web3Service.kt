@@ -48,7 +48,7 @@ class Web3Service @Inject constructor(
             val contract = pollsContract ?: return@withContext null
             
             // First try to get basic poll info without the problematic dynamic array
-            val basicPoll = contract.getPollBasic(BigInteger(pollId)) ?: return@withContext null
+            val basicPoll = contract.getPollWithFallback(BigInteger(pollId)) ?: return@withContext null
             
             // Then get options separately
             val options = contract.getPollOptions(BigInteger(pollId)) ?: return@withContext null

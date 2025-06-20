@@ -892,91 +892,193 @@ class PollsContract @Inject constructor(
             return@withContext null
         }
 
-        return@withContext decodeRaw(rawResponse)
+        return@withContext decodeRawImproved(rawResponse)
     }
 
-    private fun decodeRaw(rawResponse: String): Poll? {
+    /**
+     * Improved manual decoding with better error handling
+     */
+    private fun decodeRawImproved(rawResponse: String): Poll? {
         try {
-            Log.d("PollsContract", "Decoding PollView struct...")
+            Log.d("PollsContract", "Starting improved manual decoding...")
+            Log.d("PollsContract", "Raw response length: ${rawResponse.length}")
+            
             val hexData = if (rawResponse.startsWith("0x")) rawResponse.substring(2) else rawResponse
-
+            
+            // Validate minimum length for a complete PollView struct
+            val minExpectedLength = 20 * 64 // 20 fields * 32 bytes each
+            if (hexData.length < minExpectedLength) {
+                Log.e("PollsContract", "Response too short. Expected at least $minExpectedLength chars, got ${hexData.length}")
+                return null
+            }
+            
             var offset = 0
-
-            // Helper to read next 32 bytes (64 hex chars) and advance offset
+            
+            // Helper to read next 32 bytes with bounds checking
             fun readNext32Bytes(): String {
+                if (offset + 64 > hexData.length) {
+                    throw Exception("Attempted to read beyond response bounds at offset $offset")
+                }
                 val data = hexData.substring(offset, offset + 64)
                 offset += 64
                 return data
             }
-
-            val creator = "0x" + readNext32Bytes().substring(24)
-            val subjectOffset = readNext32Bytes().toBigInteger(16)
-            val descriptionOffset = readNext32Bytes().toBigInteger(16)
-            val categoryOffset = readNext32Bytes().toBigInteger(16)
-            val statusOffset = readNext32Bytes().toBigInteger(16)
-            val viewTypeOffset = readNext32Bytes().toBigInteger(16)
-            val optionsOffset = readNext32Bytes().toBigInteger(16)
-            val rewardPerResponse = readNext32Bytes().toBigInteger(16)
-            val maxResponses = readNext32Bytes().toBigInteger(16)
-            val durationDays = readNext32Bytes().toBigInteger(16)
-            val minContribution = readNext32Bytes().toBigInteger(16)
-            val fundingTypeOffset = readNext32Bytes().toBigInteger(16)
-            val targetFund = readNext32Bytes().toBigInteger(16)
-            val endTime = readNext32Bytes().toBigInteger(16)
-            val isOpen = readNext32Bytes().toBigInteger(16) != BigInteger.ZERO
-            val totalResponses = readNext32Bytes().toBigInteger(16)
-            val funds = readNext32Bytes().toBigInteger(16)
-            val rewardToken = "0x" + readNext32Bytes().substring(24)
-            val rewardDistributionOffset = readNext32Bytes().toBigInteger(16)
-
-            val subject = readStringAtOffset(hexData, subjectOffset)
-            val description = readStringAtOffset(hexData, descriptionOffset)
-            val category = readStringAtOffset(hexData, categoryOffset)
-            val status = readStringAtOffset(hexData, statusOffset)
-            val viewType = readStringAtOffset(hexData, viewTypeOffset)
-            val fundingType = readStringAtOffset(hexData, fundingTypeOffset)
-            val rewardDistribution = readStringAtOffset(hexData, rewardDistributionOffset)
-            val options = readStringArrayAtOffset(hexData, optionsOffset)
+            
+            // Helper to read address (20 bytes, padded to 32)
+            fun readAddress(): String {
+                val data = readNext32Bytes()
+                return "0x" + data.substring(24) // Remove padding
+            }
+            
+            // Helper to read uint256
+            fun readUint256(): BigInteger {
+                return readNext32Bytes().toBigInteger(16)
+            }
+            
+            // Helper to read bool
+            fun readBool(): Boolean {
+                return readUint256() != BigInteger.ZERO
+            }
+            
+            // Read all static fields first
+            val creator = readAddress()
+            val subjectOffset = readUint256()
+            val descriptionOffset = readUint256()
+            val categoryOffset = readUint256()
+            val statusOffset = readUint256()
+            val viewTypeOffset = readUint256()
+            val optionsOffset = readUint256()
+            val rewardPerResponse = readUint256()
+            val maxResponses = readUint256()
+            val durationDays = readUint256()
+            val minContribution = readUint256()
+            val fundingTypeOffset = readUint256()
+            val targetFund = readUint256()
+            val endTime = readUint256()
+            val isOpen = readBool()
+            val totalResponses = readUint256()
+            val funds = readUint256()
+            val rewardToken = readAddress()
+            val rewardDistributionOffset = readUint256()
+            
+            Log.d("PollsContract", "Static fields decoded successfully")
+            Log.d("PollsContract", "Creator: $creator")
+            Log.d("PollsContract", "Subject offset: $subjectOffset")
+            Log.d("PollsContract", "Options offset: $optionsOffset")
+            
+            // Read dynamic strings
+            val subject = readStringAtOffsetImproved(hexData, subjectOffset, "subject")
+            val description = readStringAtOffsetImproved(hexData, descriptionOffset, "description")
+            val category = readStringAtOffsetImproved(hexData, categoryOffset, "category")
+            val status = readStringAtOffsetImproved(hexData, statusOffset, "status")
+            val viewType = readStringAtOffsetImproved(hexData, viewTypeOffset, "viewType")
+            val fundingType = readStringAtOffsetImproved(hexData, fundingTypeOffset, "fundingType")
+            val rewardDistribution = readStringAtOffsetImproved(hexData, rewardDistributionOffset, "rewardDistribution")
+            val options = readStringArrayAtOffsetImproved(hexData, optionsOffset)
+            
+            Log.d("PollsContract", "Dynamic fields decoded successfully")
+            Log.d("PollsContract", "Subject: '$subject'")
+            Log.d("PollsContract", "Options count: ${options.size}")
             
             return Poll(
-                creator, subject, description, category, status, viewType, options,
-                rewardPerResponse, maxResponses, durationDays, minContribution,
-                fundingType, targetFund, endTime, isOpen, totalResponses, funds,
-                rewardToken, rewardDistribution
+                creator = creator,
+                subject = subject,
+                description = description,
+                category = category,
+                status = status,
+                viewType = viewType,
+                options = options,
+                rewardPerResponse = rewardPerResponse,
+                maxResponses = maxResponses,
+                durationDays = durationDays,
+                minContribution = minContribution,
+                fundingType = fundingType,
+                targetFund = targetFund,
+                endTime = endTime,
+                isOpen = isOpen,
+                totalResponses = totalResponses,
+                funds = funds,
+                rewardToken = rewardToken,
+                rewardDistribution = rewardDistribution
             )
+            
         } catch (e: Exception) {
-            Log.e("PollsContract", "Error decoding PollView struct", e)
+            Log.e("PollsContract", "Error in improved manual decoding", e)
+            Log.e("PollsContract", "Raw response: $rawResponse")
             return null
         }
     }
-
-    private fun readStringAtOffset(hexData: String, offset: BigInteger): String {
+    
+    private fun readStringAtOffsetImproved(hexData: String, offset: BigInteger, fieldName: String): String {
         try {
             val dataOffset = offset.toInt() * 2
+            if (dataOffset >= hexData.length) {
+                Log.w("PollsContract", "String offset $offset for $fieldName is beyond data bounds")
+                return ""
+            }
+            
+            if (dataOffset + 64 > hexData.length) {
+                Log.w("PollsContract", "Cannot read length for $fieldName at offset $offset")
+                return ""
+            }
+            
             val length = hexData.substring(dataOffset, dataOffset + 64).toBigInteger(16).toInt()
             if (length == 0) return ""
-            val stringData = hexData.substring(dataOffset + 64, dataOffset + 64 + (length * 2))
-            return String(hexStringToByteArray(stringData))
+            
+            val stringStart = dataOffset + 64
+            val stringEnd = stringStart + (length * 2)
+            
+            if (stringEnd > hexData.length) {
+                Log.w("PollsContract", "String data for $fieldName extends beyond response bounds")
+                return ""
+            }
+            
+            val stringData = hexData.substring(stringStart, stringEnd)
+            val result = String(hexStringToByteArray(stringData))
+            Log.d("PollsContract", "Decoded $fieldName: '$result'")
+            return result
+            
         } catch (e: Exception) {
-            Log.e("PollsContract", "Error reading string at offset $offset", e)
+            Log.e("PollsContract", "Error reading string for $fieldName at offset $offset", e)
             return ""
         }
     }
-
-    private fun readStringArrayAtOffset(hexData: String, arrayOffset: BigInteger): List<String> {
+    
+    private fun readStringArrayAtOffsetImproved(hexData: String, arrayOffset: BigInteger): List<String> {
         try {
             val arrayDataPos = arrayOffset.toInt() * 2
+            if (arrayDataPos >= hexData.length) {
+                Log.w("PollsContract", "Array offset $arrayOffset is beyond data bounds")
+                return emptyList()
+            }
+            
+            if (arrayDataPos + 64 > hexData.length) {
+                Log.w("PollsContract", "Cannot read array length at offset $arrayOffset")
+                return emptyList()
+            }
+            
             val length = hexData.substring(arrayDataPos, arrayDataPos + 64).toBigInteger(16).toInt()
             if (length == 0) return emptyList()
+            
+            Log.d("PollsContract", "Reading string array with $length elements")
             
             val strings = mutableListOf<String>()
             for (i in 0 until length) {
                 val stringOffsetPos = arrayDataPos + 64 + (i * 64)
+                if (stringOffsetPos + 64 > hexData.length) {
+                    Log.w("PollsContract", "Cannot read string offset $i in array")
+                    break
+                }
+                
                 val stringOffset = hexData.substring(stringOffsetPos, stringOffsetPos + 64).toBigInteger(16)
                 val absoluteStringOffset = arrayOffset + stringOffset
-                strings.add(readStringAtOffset(hexData, absoluteStringOffset))
+                val string = readStringAtOffsetImproved(hexData, absoluteStringOffset, "option[$i]")
+                strings.add(string)
             }
+            
+            Log.d("PollsContract", "Successfully decoded ${strings.size} options")
             return strings
+            
         } catch (e: Exception) {
             Log.e("PollsContract", "Error reading string array at offset $arrayOffset", e)
             return emptyList()
@@ -992,6 +1094,261 @@ class PollsContract @Inject constructor(
             i += 2
         }
         return data
+    }
+
+    /**
+     * Alternative: Raw call with custom decoder for complex structs
+     */
+    suspend fun getPollWithRawCall(pollId: BigInteger): Poll? = withContext(Dispatchers.IO) {
+        try {
+            Log.d("PollsContract", "Calling getPoll with raw call for poll $pollId")
+            
+            // Create function with minimal output parameters to avoid Web3j decoding issues
+            val function = org.web3j.abi.datatypes.Function(
+                GET_POLL_FUNCTION,
+                listOf(Uint256(pollId)),
+                emptyList() // Let us handle decoding manually
+            )
+            
+            val encodedFunction = FunctionEncoder.encode(function)
+            Log.d("PollsContract", "Raw call encoded function: $encodedFunction")
+            
+            val ethCall = web3j.ethCall(
+                Transaction.createEthCallTransaction(null, contractAddress, encodedFunction),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (ethCall.hasError()) {
+                Log.e("PollsContract", "Raw call failed: ${ethCall.error.message}")
+                return@withContext null
+            }
+            
+            val rawResponse = ethCall.value
+            Log.d("PollsContract", "Raw call response: $rawResponse")
+            
+            if (rawResponse.isNullOrEmpty() || rawResponse == "0x" || rawResponse == "0x0") {
+                Log.w("PollsContract", "Raw call returned empty response")
+                return@withContext null
+            }
+            
+            // Use the improved manual decoder
+            return@withContext decodeRawImproved(rawResponse)
+            
+        } catch (e: Exception) {
+            Log.e("PollsContract", "Error in raw call getPoll", e)
+            return@withContext null
+        }
+    }
+
+    /**
+     * Alternative: Direct HTTP RPC call to bypass Web3j decoding
+     */
+    suspend fun getPollWithDirectRPC(pollId: BigInteger): Poll? = withContext(Dispatchers.IO) {
+        try {
+            Log.d("PollsContract", "Calling getPoll with direct RPC for poll $pollId")
+            
+            // Create the RPC request manually
+            val functionSelector = "1a8cbcaa" // keccak256("getPoll(uint256)")[:8]
+            val pollIdHex = pollId.toString(16).padStart(64, '0')
+            val data = "0x$functionSelector$pollIdHex"
+            
+            val rpcRequest = """
+                {
+                    "jsonrpc": "2.0",
+                    "method": "eth_call",
+                    "params": [
+                        {
+                            "to": "$contractAddress",
+                            "data": "$data"
+                        },
+                        "latest"
+                    ],
+                    "id": 1
+                }
+            """.trimIndent()
+            
+            Log.d("PollsContract", "RPC request: $rpcRequest")
+            
+            // You would need to implement HTTP client here
+            // For now, we'll use Web3j's underlying HTTP client
+            val ethCall = web3j.ethCall(
+                Transaction.createEthCallTransaction(null, contractAddress, data),
+                DefaultBlockParameterName.LATEST
+            ).send()
+            
+            if (ethCall.hasError()) {
+                Log.e("PollsContract", "Direct RPC call failed: ${ethCall.error.message}")
+                return@withContext null
+            }
+            
+            val rawResponse = ethCall.value
+            Log.d("PollsContract", "Direct RPC response: $rawResponse")
+            
+            if (rawResponse.isNullOrEmpty() || rawResponse == "0x" || rawResponse == "0x0") {
+                Log.w("PollsContract", "Direct RPC returned empty response")
+                return@withContext null
+            }
+            
+            // Use the improved manual decoder
+            return@withContext decodeRawImproved(rawResponse)
+            
+        } catch (e: Exception) {
+            Log.e("PollsContract", "Error in direct RPC getPoll", e)
+            return@withContext null
+        }
+    }
+
+    /**
+     * Alternative: Web3j contract wrapper with exact struct matching
+     */
+    suspend fun getPollWithExactStruct(pollId: BigInteger): Poll? = withContext(Dispatchers.IO) {
+        try {
+            Log.d("PollsContract", "Calling getPoll with exact struct matching for poll $pollId")
+            
+            // Create function with exact output parameters matching the Solidity struct
+            val function = org.web3j.abi.datatypes.Function(
+                GET_POLL_FUNCTION,
+                listOf(Uint256(pollId)),
+                listOf(
+                    TypeReference.create(Address::class.java),      // creator
+                    TypeReference.create(Utf8String::class.java),   // subject
+                    TypeReference.create(Utf8String::class.java),   // description
+                    TypeReference.create(Utf8String::class.java),   // category
+                    TypeReference.create(Utf8String::class.java),   // status
+                    TypeReference.create(Utf8String::class.java),   // viewType
+                    object : TypeReference<DynamicArray<Utf8String>>() {}, // options
+                    TypeReference.create(Uint256::class.java),      // rewardPerResponse
+                    TypeReference.create(Uint256::class.java),      // maxResponses
+                    TypeReference.create(Uint256::class.java),      // durationDays
+                    TypeReference.create(Uint256::class.java),      // minContribution
+                    TypeReference.create(Utf8String::class.java),   // fundingType
+                    TypeReference.create(Uint256::class.java),      // targetFund
+                    TypeReference.create(Uint256::class.java),      // endTime
+                    TypeReference.create(Bool::class.java),         // isOpen
+                    TypeReference.create(Uint256::class.java),      // totalResponses
+                    TypeReference.create(Uint256::class.java),      // funds
+                    TypeReference.create(Address::class.java),      // rewardToken
+                    TypeReference.create(Utf8String::class.java)    // rewardDistribution
+                )
+            )
+            
+            val result = executeCall(function)
+            
+            return@withContext if (result.size >= 20) {
+                val poll = Poll(
+                    creator = (result[0] as Address).value,
+                    subject = (result[1] as Utf8String).value,
+                    description = (result[2] as Utf8String).value,
+                    category = (result[3] as Utf8String).value,
+                    status = (result[4] as Utf8String).value,
+                    viewType = (result[5] as Utf8String).value,
+                    options = (result[6] as DynamicArray<Utf8String>).value.map { it.value },
+                    rewardPerResponse = (result[7] as Uint256).value,
+                    maxResponses = (result[8] as Uint256).value,
+                    durationDays = (result[9] as Uint256).value,
+                    minContribution = (result[10] as Uint256).value,
+                    fundingType = (result[11] as Utf8String).value,
+                    targetFund = (result[12] as Uint256).value,
+                    endTime = (result[13] as Uint256).value,
+                    isOpen = (result[14] as Bool).value,
+                    totalResponses = (result[15] as Uint256).value,
+                    funds = (result[16] as Uint256).value,
+                    rewardToken = (result[17] as Address).value,
+                    rewardDistribution = (result[18] as Utf8String).value
+                )
+                
+                Log.d("PollsContract", "Successfully decoded poll with exact struct: ${poll.subject}")
+                poll
+            } else {
+                Log.w("PollsContract", "Exact struct decoding returned insufficient results: ${result.size}")
+                null
+            }
+            
+        } catch (e: Exception) {
+            Log.e("PollsContract", "Error in exact struct getPoll", e)
+            return@withContext null
+        }
+    }
+
+    /**
+     * Comprehensive fallback strategy that tries multiple decoding approaches
+     */
+    suspend fun getPollWithFallback(pollId: BigInteger): Poll? = withContext(Dispatchers.IO) {
+        Log.d("PollsContract", "Starting fallback strategy for poll $pollId")
+        
+        // Strategy 1: Try exact struct matching first
+        try {
+            Log.d("PollsContract", "Fallback Strategy 1: Exact struct matching")
+            val result = getPollWithExactStruct(pollId)
+            if (result != null) {
+                Log.d("PollsContract", "✅ Strategy 1 succeeded")
+                return@withContext result
+            }
+        } catch (e: Exception) {
+            Log.w("PollsContract", "Strategy 1 failed", e)
+        }
+        
+        // Strategy 2: Try raw call with manual decoding
+        try {
+            Log.d("PollsContract", "Fallback Strategy 2: Raw call with manual decoding")
+            val result = getPollWithRawCall(pollId)
+            if (result != null) {
+                Log.d("PollsContract", "✅ Strategy 2 succeeded")
+                return@withContext result
+            }
+        } catch (e: Exception) {
+            Log.w("PollsContract", "Strategy 2 failed", e)
+        }
+        
+        // Strategy 3: Try basic poll without dynamic arrays
+        try {
+            Log.d("PollsContract", "Fallback Strategy 3: Basic poll + separate options")
+            val basicPoll = getPollBasic(pollId)
+            val options = getPollOptions(pollId)
+            
+            if (basicPoll != null && options != null) {
+                val poll = Poll(
+                    creator = basicPoll.creator,
+                    subject = basicPoll.title,
+                    description = basicPoll.description,
+                    category = "", // Not available in basic poll
+                    status = "", // Not available in basic poll
+                    viewType = "", // Not available in basic poll
+                    options = options.texts,
+                    rewardPerResponse = BigInteger.ZERO, // Not available in basic poll
+                    maxResponses = BigInteger.ZERO, // Not available in basic poll
+                    durationDays = BigInteger.ZERO, // Not available in basic poll
+                    minContribution = BigInteger.ZERO, // Not available in basic poll
+                    fundingType = "", // Not available in basic poll
+                    targetFund = BigInteger.ZERO, // Not available in basic poll
+                    endTime = basicPoll.endTime,
+                    isOpen = basicPoll.isActive,
+                    totalResponses = basicPoll.totalVotes,
+                    funds = BigInteger.ZERO, // Not available in basic poll
+                    rewardToken = "", // Not available in basic poll
+                    rewardDistribution = "" // Not available in basic poll
+                )
+                Log.d("PollsContract", "✅ Strategy 3 succeeded")
+                return@withContext poll
+            }
+        } catch (e: Exception) {
+            Log.w("PollsContract", "Strategy 3 failed", e)
+        }
+        
+        // Strategy 4: Try direct RPC call
+        try {
+            Log.d("PollsContract", "Fallback Strategy 4: Direct RPC call")
+            val result = getPollWithDirectRPC(pollId)
+            if (result != null) {
+                Log.d("PollsContract", "✅ Strategy 4 succeeded")
+                return@withContext result
+            }
+        } catch (e: Exception) {
+            Log.w("PollsContract", "Strategy 4 failed", e)
+        }
+        
+        Log.e("PollsContract", "❌ All fallback strategies failed for poll $pollId")
+        return@withContext null
     }
 }
 
