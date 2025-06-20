@@ -1,6 +1,7 @@
 package com.blurtopian.dpolls.di
 
-import com.blurtopian.dpolls.common.NetworkConstants
+import android.util.Log
+import com.blurtopian.dpolls.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,7 +31,8 @@ object Web3Module {
     @Provides
     @Singleton
     fun provideWeb3j(okHttpClient: OkHttpClient): Web3j {
-        return Web3j.build(HttpService(NetworkConstants.RPC_URL, okHttpClient))
+        Log.d("Web3Module", "Initializing Web3j with RPC URL: ${BuildConfig.NERO_RPC_URL}")
+        return Web3j.build(HttpService(BuildConfig.NERO_RPC_URL, okHttpClient))
     }
 
     @Provides

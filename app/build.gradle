@@ -24,22 +24,28 @@ android {
             useSupportLibrary true
         }
 
-        // Blockchain configuration
-        buildConfigField "String", "NERO_RPC_URL", '"https://rpc.nerochain.io"'
-        buildConfigField "String", "NERO_CHAIN_ID", '"1329"'
-        buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x71322f1Bb13f0857410f2ebd4BC6ad731f2De6E5"'
+        // Blockchain configuration - Default to testnet
+        buildConfigField "String", "NERO_RPC_URL", '"https://rpc-testnet.nerochain.io"'
+        buildConfigField "String", "NERO_CHAIN_ID", '"689"'
+        buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x755934906e7783B2CfE16381A8Dd41E0Ad3Ffbe1"'
     }
 
     buildTypes {
         debug {
             debuggable true
             minifyEnabled false
-            buildConfigField "String", "NERO_RPC_URL", '"https://testnet-rpc.nerochain.io"'
-            buildConfigField "String", "NERO_CHAIN_ID", '"1328"'
+            // Debug uses testnet
+            buildConfigField "String", "NERO_RPC_URL", '"https://rpc-testnet.nerochain.io"'
+            buildConfigField "String", "NERO_CHAIN_ID", '"689"'
+            buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x755934906e7783B2CfE16381A8Dd41E0Ad3Ffbe1"'
         }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Release uses mainnet
+            buildConfigField "String", "NERO_RPC_URL", '"https://rpc.nerochain.io"'
+            buildConfigField "String", "NERO_CHAIN_ID", '"1689"'
+            buildConfigField "String", "POLLS_CONTRACT_ADDRESS", '"0x71322f1Bb13f0857410f2ebd4BC6ad731f2De6E5"'
         }
     }
 

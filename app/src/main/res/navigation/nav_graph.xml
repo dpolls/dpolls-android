@@ -11,12 +11,12 @@
 
     <fragment
         android:id="@+id/pollsFragment"
-        android:name="com.blurtopian.dpolls.presentation.polls.PollsFragment"
+        android:name="com.blurtopian.dpolls.ui.polls.PollsFragment"
         android:label="Polls" />
 
     <fragment
         android:id="@+id/profileFragment"
-        android:name="com.blurtopian.dpolls.presentation.profile.ProfileFragment"
+        android:name="com.blurtopian.dpolls.ui.profile.ProfileFragment"
         android:label="Profile" />
 
 </navigation> 
